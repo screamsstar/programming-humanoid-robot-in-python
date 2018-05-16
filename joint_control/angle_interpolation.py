@@ -50,27 +50,28 @@ class AngleInterpolationAgent(PIDAgent):
         current_time = perception.time - self.__start_time
 
         for name_index, joint_name in enumerate(names):
-            for time_index in range(len(times[name_index]) - 1):
-                if current_time < times[name_index][0]:
-                    p0 = perception.joint[joint_name]
-                    p3 = keys[name_index][0][0]
-                    p1 = keys[name_index][0][1][2] + p0
-                    p2 = keys[name_index][0][2][2] + p3
+            if joint_name in self.joint_names:
+                for time_index in range(len(times[name_index]) - 1):
+                    if current_time < times[name_index][0]:
+                        p0 = perception.joint[joint_name]
+                        p3 = keys[name_index][0][0]
+                        p1 = keys[name_index][0][1][2] + p0
+                        p2 = keys[name_index][0][2][2] + p3
 
-                    i = current_time / times[name_index][0]
+                        i = current_time / times[name_index][0]
 
-                    target_joints[name_index] = (1-i)**3 * p0 + 3 * (1-i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 *p3
+                        target_joints[joint_name] = (1-i)**3 * p0 + 3 * (1-i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 *p3
 
-                elif times[name_index][time_index] < current_time < times[name_index][time_index + 1]:
-                    p0 = keys[name_index][time_index][0]
-                    p3 = keys[name_index][time_index + 1][0]
-                    p1 = keys[name_index][time_index][1][2] + p0
-                    p2 = keys[name_index][time_index][2][2] + p3
+                    elif times[name_index][time_index] < current_time < times[name_index][time_index + 1]:
+                        p0 = keys[name_index][time_index][0]
+                        p3 = keys[name_index][time_index + 1][0]
+                        p1 = keys[name_index][time_index][1][2] + p0
+                        p2 = keys[name_index][time_index][2][2] + p3
 
-                    i = (current_time - times[name_index][time_index]) / \
-                        (times[name_index][time_index + 1] - times[name_index][time_index])
+                        i = (current_time - times[name_index][time_index]) / \
+                            (times[name_index][time_index + 1] - times[name_index][time_index])
 
-                    target_joints[name_index] = (1-i)**3 * p0 + 3 * (1-i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 *p3
+                        target_joints[joint_name] = (1-i)**3 * p0 + 3 * (1-i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 *p3
 
 
 
