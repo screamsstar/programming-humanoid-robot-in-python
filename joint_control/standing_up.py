@@ -25,7 +25,7 @@ class StandingUpAgent(PostureRecognitionAgent):
                 print("Changing to rightBackToStand")
             elif posture == "Belly":
                 self.reset_time()
-                self.keyframes = leftBellyToStand()
+                self.keyframes = rightBellyToStand()
                 print("Changing to rightBellyToStand")
             elif posture == "Left":
                 self.reset_time()
@@ -60,6 +60,7 @@ class TestStandingUpAgent(StandingUpAgent):
             action.stiffness = {j: 1 for j in self.joint_names}  # turn on joints
         if time_now - self.stiffness_on_off_time > self.stiffness_on_cycle + self.stiffness_off_cycle:
             self.stiffness_on_off_time = time_now
+            self.keyframes = ([], [], [])
 
         return action
 

@@ -53,32 +53,40 @@ class AngleInterpolationAgent(PIDAgent):
         current_time = perception.time - self.__start_time
 
         for name_index, joint_name in enumerate(names):
+
             if joint_name in self.joint_names:
+
                 for time_index in range(len(times[name_index]) - 1):
+
                     if current_time < times[name_index][0]:
                         p0 = self.__start_joints[joint_name]
+                        p1 = self.__start_joints[joint_name]
+                        p2 = keys[name_index][0][0] + keys[name_index][0][1][2]
                         p3 = keys[name_index][0][0]
-                        p1 = keys[name_index][0][1][2] + p0
-                        p2 = keys[name_index][0][2][2] + p3
 
                         i = current_time / times[name_index][0]
 
-                        target_joints[joint_name] = (1-i)**3 * p0 + 3 * (1-i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 *p3
+                        target_joints[joint_name] = self.cubic_bezier(p0, p1, p2, p3, i)
 
                     elif times[name_index][time_index] < current_time < times[name_index][time_index + 1]:
                         p0 = keys[name_index][time_index][0]
+                        p1 = keys[name_index][time_index][0] + keys[name_index][time_index][2][2]
+                        p2 = keys[name_index][time_index + 1][0] + keys[name_index][time_index + 1][1][2]
                         p3 = keys[name_index][time_index + 1][0]
-                        p1 = keys[name_index][time_index][1][2] + p0
-                        p2 = keys[name_index][time_index][2][2] + p3
 
-                        i = (current_time - times[name_index][time_index]) / \
-                            (times[name_index][time_index + 1] - times[name_index][time_index])
+                        t_curr_keyframe = current_time - times[name_index][time_index]
+                        t_abs_keyframe = times[name_index][time_index + 1] - times[name_index][time_index]
+                        i = t_curr_keyframe / t_abs_keyframe
 
-                        target_joints[joint_name] = (1-i)**3 * p0 + 3 * (1-i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 *p3
+                        target_joints[joint_name] = self.cubic_bezier(p0, p1, p2, p3, i)
+
                     elif times[name_index][len(times[name_index]) - 1] < current_time:
-                        self.keyframes = ([], [], [])
+                        target_joints[joint_name] = keys[name_index][len(times[name_index]) - 1][0]
 
         return target_joints
+
+    def cubic_bezier(self, p0, p1, p2, p3, i):
+        return (1 - i)**3 * p0 + 3 * (1 - i)**2 * i * p1 + 3 * (1 - i) * i**2 * p2 + i**3 * p3
 
     def reset_time(self):
         self.__start_time = -1
