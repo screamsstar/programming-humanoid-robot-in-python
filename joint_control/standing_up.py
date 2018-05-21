@@ -18,23 +18,26 @@ class StandingUpAgent(PostureRecognitionAgent):
     def standing_up(self):
         posture = self.posture
         # YOUR CODE HERE
-        if self.keyframes == ([], [], []):
-            if posture == "Back":
+        if posture == "Back":
+            if self.keyframes != rightBackToStand():
                 self.reset_time()
                 self.keyframes = rightBackToStand()
-                print("Changing to rightBackToStand")
-            elif posture == "Belly":
+                print("Posture is \"Back\" --> Changing keyframe to rightBackToStand")
+        elif posture == "Belly":
+            if self.keyframes != rightBellyToStand():
                 self.reset_time()
                 self.keyframes = rightBellyToStand()
-                print("Changing to rightBellyToStand")
-            elif posture == "Left":
+                print("Posture is \"Belly\" --> Changing keyframe to rightBellyToStand")
+        elif posture == "Left":
+            if self.keyframes != leftBackToStand():
                 self.reset_time()
                 self.keyframes = leftBackToStand()
-                print("Changing to leftBackToStand")
-            elif posture == "Right":
+                print("Posture is \"Left\" --> Changing keyframe to leftBackToStand")
+        elif posture == "Right":
+            if self.keyframes != rightBellyToStand():
                 self.reset_time()
                 self.keyframes = rightBellyToStand()
-                print("Changing to rightBellyToStand")
+                print("Posture is \"Right\" --> Changing keyframe to rightBellyToStand")
 
 
 
