@@ -21,6 +21,7 @@ import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 
 from numpy.matlib import matrix, identity
+import math
 
 from angle_interpolation import AngleInterpolationAgent
 
@@ -36,7 +37,10 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
 
         # chains defines the name of chain and joints of the chain
         self.chains = {'Head': ['HeadYaw', 'HeadPitch']
-                       # YOUR CODE HERE
+                       'LArm': ['LShoulderPitch', 'LShoulderRoll', 'LElbowYaw', 'LElbowRoll'],
+                       'RArm': ['RShoulderPitch', 'RShoulderRoll', 'RElbowYaw', 'RElbowRoll'],
+                       'LLeg': ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'LAnklePitch', 'LAnkleRoll'],
+                       'RLeg': ['RHipYawPitch', 'RHipRoll', 'RHipPitch', 'RKneePitch', 'RAnklePitch', 'RAnkleRoll']
                        }
 
     def think(self, perception):
@@ -53,6 +57,22 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         '''
         T = identity(4)
         # YOUR CODE HERE
+        axis_unit_vector = [0,0,0]
+        # TODO determine axis
+
+        cos = math.cos(joint_angle)
+        sin = math.sin(joint_angle)
+        normalizer = math.sqrt(math.fsum([x**2 for x in axis_unit_vector]))
+        ux = axis_unit_vector[0] / normalizer
+        uy = axis_unit_vector[1] / normalizer
+        uz = axis_unit_vector[2] / normalizer
+        # rotation matrix in 3d around any normalized axis
+        rotation_matrix = matrix([[cos+ux**2*(1-cos), ux*uy*(1-cos)-uz*sin, ux*uz*(1-cos)+uy*sin],
+                                  [uy*ux*(1-cos)+uz*sin, cos+uy**2*(1-cos), uy*uz*(1-cos)-ux*sin],
+                                  [uz*ux*(1-cos)-uy*sin, uz*uy*(1-cos)+ux*sin, cos+uz**2*(1-cos)]])
+
+        T[0:3, 0:3] = rotation_matrix
+        # TODO set T[0:2, 3] right according to distances
 
         return T
 
