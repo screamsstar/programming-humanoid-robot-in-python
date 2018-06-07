@@ -79,6 +79,8 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                         'RAnklePitch': [0, 0, -102.9],
                         'RAnkleRoll': [0, 0, 0],
                         }
+        self.phi=0
+        self.pstring = ""
 
     def think(self, perception):
         self.forward_kinematics(perception.joint)
@@ -97,6 +99,10 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         # determine right rotation_matrix values
         normal_value_for_2 = math.sqrt(0.5)
 
+        self.phi +=1
+
+
+
         if self.yaw_rotators.__contains__(joint_name):
             ux, uy, uz = 0, 0, 1
         elif self.roll_rotators.__contains__(joint_name):
@@ -104,12 +110,20 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         elif self.pitch_rotators.__contains__(joint_name):
             ux, uy, uz = 0, 1, 0
         elif joint_name == 'LHipYawPitch':
+            print("LeftLeg")
+            self.phi=0
             ux, uy, uz = 0, normal_value_for_2, -normal_value_for_2
         elif joint_name == 'RHipYawPitch':
+            print("RightLeg")
+            self.phi=0
             ux, uy, uz = 0, -normal_value_for_2, -normal_value_for_2
         else:
             print "weird jointname"
             ux, uy, uz = 0, 0, 0
+
+        p = "p"+str(self.phi)
+
+        self.pstring += " . {{cos("+p+")+"+str(ux**2)+"*(1-cos("+p+")), "+str(ux*uy)+"*(1-cos("+p+"))-"+str(uz)+"*sin("+p+"), "+str(ux*uz)+"*(1-cos("+p+"))+"+str(uy)+"*sin("+p+"), "+str(self.distances[joint_name][0])+"},{"+str(uy*ux)+"*(1-cos("+p+"))+"+str(uz)+"*sin("+p+"), cos("+p+")+"+str(uy**2)+"*(1-cos("+p+")), "+str(uy*uz)+"*(1-cos("+p+"))-"+str(ux)+"*sin("+p+"), "+str(self.distances[joint_name][1])+"}, {"+str(uz*ux)+"*(1-cos("+p+"))-"+str(uy)+"*sin("+p+"), "+str(uz*uy)+"*(1-cos("+p+"))+"+str(ux)+"*sin("+p+"), cos("+p+")+"+str(uz**2)+"*(1-cos("+p+")), "+str(self.distances[joint_name][2])+"}, {0, 0, 0, 1}}"
 
         cos = math.cos(joint_angle)
         sin = math.sin(joint_angle)
@@ -119,7 +133,7 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                                   [uz*ux*(1-cos)-uy*sin, uz*uy*(1-cos)+ux*sin, cos+uz**2*(1-cos)]])
 
         T[0:3, 0:3] = rotation_matrix
-        # set T[0:2, 3] right according to distances
+        # set T[0:3, 3] right according to distances
         distance_lengths = self.distances[joint_name]
         for i in range(3):
             T[i, 3] = distance_lengths[i]
@@ -132,15 +146,25 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         :param joints: {joint_name: joint_angle}
         '''
         for chain_joints in self.chains.values():
+            print(self.pstring)
+            self.pstring = ""
+            print("new chain")
             T = identity(4)
             for joint in chain_joints:
                 angle = joints[joint]
                 Tl = self.local_trans(joint, angle)
                 # YOUR CODE HERE
                 T = dot(T, Tl)
-                print(joint)
-                print(T)
                 self.transforms[joint] = T
+
+    def forward_kinematics_for_one_chain(self, chain_name, angles):
+        chain = self.chains[chain_name]
+        T = identity(4)
+        for joint in chain:
+            angle = angles[joint]
+            Tl = self.local_trans(joint, angle)
+            T = dot(T, Tl)
+            self.transforms[joint] = T
 
 
 if __name__ == '__main__':
