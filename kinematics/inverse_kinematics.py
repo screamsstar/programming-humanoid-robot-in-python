@@ -151,8 +151,8 @@ if __name__ == '__main__':
     T[2, 0] = 0
     T[0, 2] = 1
     T[0, -1] = 200
-    T[1, -1] = 60
+    T[1, -1] = -60
     T[2, -1] = -20
     print("Target transform:" + str(T) + "\n")
-    agent.set_transforms('LLeg', T)
+    agent.set_transforms('RLeg', T)
     agent.run()
