@@ -78,6 +78,9 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                         'RAnklePitch': [0, 0, -102.9],
                         'RAnkleRoll': [0, 0, 0],
                         }
+        self.forward_kinematics_debug = True
+        self.forward_kinematics_debug_single_transforms = False
+        self.inverse_debug = True
 
     def think(self, perception):
         self.forward_kinematics(perception.joint)
@@ -91,12 +94,8 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
-        # YOUR CODE HERE
         # determine right rotation_matrix values
         normal_value_for_2 = sqrt(0.5)
-
-
-
 
         if self.yaw_rotators.__contains__(joint_name):
             ux, uy, uz = 0, 0, 1
@@ -111,7 +110,6 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         else:
             print "weird jointname"
             ux, uy, uz = 0, 0, 0
-
 
         cost = cos(joint_angle)
         sint = sin(joint_angle)
@@ -134,13 +132,15 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
             for joint in chain_joints:
                 angle = joints[joint]
                 Tl = self.local_trans(joint, angle)
-                # YOUR CODE HERE
+                if self.forward_kinematics_debug_single_transforms:
+                    print(joint)
+                    print(Tl)
                 T = dot(T, Tl)
                 self.transforms[joint] = T
-            # print(chain_name)
-            # print(T)
-            # if chain_name == "LLeg":
-            #     print(T)
+            if self.forward_kinematics_debug:
+                print(chain_name)
+                print(T)
+
 
 
     def forward_kinematics_for_one_chain(self, chain_name, angles):

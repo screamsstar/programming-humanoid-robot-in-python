@@ -29,24 +29,28 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         '''
 
         target = self.from_transform(transform)
-        print("Target Vector:" + str(target) + "\n")
         thetas = []
         for i, joint in enumerate(self.chains[effector_name]):
             thetas.append(self.perception.joint[joint])
 
-        print("Start angles:" + str(thetas) + "\n")
-
         last_error = deque(np.zeros(10), maxlen=10)
 
-        print("Error\t|\tAngles\n--------------------------------------")
+        print("Starting numerical calculation (takes some time...)")
+
+        if self.inverse_debug:
+            print("Target Vector:" + str(target) + "\n")
+            print("Start angles:" + str(thetas) + "\n")
+            print("Error\t\t\t|\t\tAngles")
+            print("------------------------------------------------------------")
 
         while True:
             error = self.error_func(effector_name, thetas, target)
 
-            print(str(error) + "\t" + str(thetas))
+            if self.inverse_debug:
+                print(str(error) + "\t\t" + str(thetas))
 
             if error+0.1 > last_error[0] > error-0.1:
-                print("best possible solution with error: " + str(error))
+                print("Best possible solution found with an error of: " + str(error))
                 break
 
             changes_list = []
@@ -67,13 +71,12 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
 
             last_error.append(error)
 
-
-        print("Done! Thetas:" + str(thetas))
-
         result = self.forward_kinematics_2(effector_name, thetas)
 
-        print("Resulting transform (theoretical):")
-        print(result)
+        if self.inverse_debug:
+            print("Done! Thetas:" + str(thetas))
+            print("Resulting transform (theoretical):")
+            print(result)
 
         return thetas
 
@@ -102,7 +105,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         # xangle = arctan2(transform[2, 1], transform[2, 2])
         # yangle = - arcsin(transform[2, 0])
         # zangle = arctan2(transform[1, 0], transform[0, 0])
-        # arctan or arcsin or arccos seem to not work with autograd
+        # TODO arctan or arcsin or arccos seem to not work with autograd!!
 
         # this is a simplified substitute for the angles
         # --> distance between the corresponding vector and the standard axis-vector and that squared
@@ -110,7 +113,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         xangle = (transform[0, 0]-1)**2 + transform[0, 1]**2 + transform[0, 2]**2
         yangle = transform[1, 0]**2 + (transform[1, 1]-1)**2 + transform[1, 2]**2
         zangle = transform[2, 0]**2 + transform[2, 1]**2 + (transform[2, 2]-1)**2
-        # xangle, yangle, zangle = 0, 0, 0
+
         return np.array([transform[0, 3], transform[1, 3], transform[2, 3], xangle, yangle, zangle])
 
 
