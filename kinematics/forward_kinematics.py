@@ -139,8 +139,8 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                 self.transforms[joint] = T
             # print(chain_name)
             # print(T)
-            if chain_name == "LLeg":
-                print(T)
+            # if chain_name == "LLeg":
+            #     print(T)
 
 
     def forward_kinematics_for_one_chain(self, chain_name, angles):

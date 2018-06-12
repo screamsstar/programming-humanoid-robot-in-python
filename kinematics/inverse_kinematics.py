@@ -45,7 +45,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
 
             print(str(error) + "\t" + str(thetas))
 
-            if error+0.1 > last_error[0] > error-0.1 and error < 50:
+            if error+0.1 > last_error[0] > error-0.1:
                 print("best possible solution with error: " + str(error))
                 break
 
@@ -72,7 +72,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
 
         result = self.forward_kinematics_2(effector_name, thetas)
 
-        print("Resulting transform:")
+        print("Resulting transform (theoretical):")
         print(result)
 
         return thetas
@@ -143,9 +143,13 @@ if __name__ == '__main__':
     agent = InverseKinematicsAgent()
     # test inverse kinematics
     T = identity(4)
-    T[0, -1] = -10
+    T[0, 0] = 0
+    T[0, 2] = 1
+    T[2, 0] = 0
+    T[0, 2] = 1
+    T[0, -1] = 200
     T[1, -1] = 60
-    T[2, -1] = -260
+    T[2, -1] = -20
     print("Target transform:" + str(T) + "\n")
     agent.set_transforms('LLeg', T)
     agent.run()
