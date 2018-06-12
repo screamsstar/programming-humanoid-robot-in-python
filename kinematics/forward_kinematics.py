@@ -20,8 +20,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 
-from numpy.matlib import matrix, identity, dot
-import math
+from autograd.numpy import cos, sin, matrix, identity, dot, sqrt
 
 from angle_interpolation import AngleInterpolationAgent
 
@@ -79,8 +78,6 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                         'RAnklePitch': [0, 0, -102.9],
                         'RAnkleRoll': [0, 0, 0],
                         }
-        self.phi=0
-        self.pstring = ""
 
     def think(self, perception):
         self.forward_kinematics(perception.joint)
@@ -94,12 +91,10 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
-        T = identity(4)
         # YOUR CODE HERE
         # determine right rotation_matrix values
-        normal_value_for_2 = math.sqrt(0.5)
+        normal_value_for_2 = sqrt(0.5)
 
-        self.phi +=1
 
 
 
@@ -110,33 +105,22 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         elif self.pitch_rotators.__contains__(joint_name):
             ux, uy, uz = 0, 1, 0
         elif joint_name == 'LHipYawPitch':
-            print("LeftLeg")
-            self.phi=0
             ux, uy, uz = 0, normal_value_for_2, -normal_value_for_2
         elif joint_name == 'RHipYawPitch':
-            print("RightLeg")
-            self.phi=0
             ux, uy, uz = 0, -normal_value_for_2, -normal_value_for_2
         else:
             print "weird jointname"
             ux, uy, uz = 0, 0, 0
 
-        p = "p"+str(self.phi)
 
-        self.pstring += " . {{cos("+p+")+"+str(ux**2)+"*(1-cos("+p+")), "+str(ux*uy)+"*(1-cos("+p+"))-"+str(uz)+"*sin("+p+"), "+str(ux*uz)+"*(1-cos("+p+"))+"+str(uy)+"*sin("+p+"), "+str(self.distances[joint_name][0])+"},{"+str(uy*ux)+"*(1-cos("+p+"))+"+str(uz)+"*sin("+p+"), cos("+p+")+"+str(uy**2)+"*(1-cos("+p+")), "+str(uy*uz)+"*(1-cos("+p+"))-"+str(ux)+"*sin("+p+"), "+str(self.distances[joint_name][1])+"}, {"+str(uz*ux)+"*(1-cos("+p+"))-"+str(uy)+"*sin("+p+"), "+str(uz*uy)+"*(1-cos("+p+"))+"+str(ux)+"*sin("+p+"), cos("+p+")+"+str(uz**2)+"*(1-cos("+p+")), "+str(self.distances[joint_name][2])+"}, {0, 0, 0, 1}}"
-
-        cos = math.cos(joint_angle)
-        sin = math.sin(joint_angle)
-        # rotation matrix in 3d around any normalized axis
-        rotation_matrix = matrix([[cos+ux**2*(1-cos), ux*uy*(1-cos)-uz*sin, ux*uz*(1-cos)+uy*sin],
-                                  [uy*ux*(1-cos)+uz*sin, cos+uy**2*(1-cos), uy*uz*(1-cos)-ux*sin],
-                                  [uz*ux*(1-cos)-uy*sin, uz*uy*(1-cos)+ux*sin, cos+uz**2*(1-cos)]])
-
-        T[0:3, 0:3] = rotation_matrix
-        # set T[0:3, 3] right according to distances
+        cost = cos(joint_angle)
+        sint = sin(joint_angle)
         distance_lengths = self.distances[joint_name]
-        for i in range(3):
-            T[i, 3] = distance_lengths[i]
+        # rotation matrix in 3d around any normalized axis
+        T = matrix([[cost+ux**2*(1-cost), ux*uy*(1-cost)-uz*sint, ux*uz*(1-cost)+uy*sint, distance_lengths[0]],
+                    [uy*ux*(1-cost)+uz*sint, cost+uy**2*(1-cost), uy*uz*(1-cost)-ux*sint, distance_lengths[1]],
+                    [uz*ux*(1-cost)-uy*sint, uz*uy*(1-cost)+ux*sint, cost+uz**2*(1-cost), distance_lengths[2]],
+                    [0, 0, 0, 1]])
 
         return T
 
@@ -145,10 +129,7 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
 
         :param joints: {joint_name: joint_angle}
         '''
-        for chain_joints in self.chains.values():
-            print(self.pstring)
-            self.pstring = ""
-            print("new chain")
+        for chain_name, chain_joints in self.chains.iteritems():
             T = identity(4)
             for joint in chain_joints:
                 angle = joints[joint]
@@ -156,6 +137,11 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                 # YOUR CODE HERE
                 T = dot(T, Tl)
                 self.transforms[joint] = T
+            # print(chain_name)
+            # print(T)
+            # if chain_name == "LLeg":
+            #     print(T)
+
 
     def forward_kinematics_for_one_chain(self, chain_name, angles):
         chain = self.chains[chain_name]

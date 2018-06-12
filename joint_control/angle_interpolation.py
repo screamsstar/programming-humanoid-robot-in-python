@@ -55,7 +55,6 @@ class AngleInterpolationAgent(PIDAgent):
         for name_index, joint_name in enumerate(names):
 
             if joint_name in self.joint_names:
-
                 for time_index in range(len(times[name_index]) - 1):
 
                     if current_time < times[name_index][0]:
@@ -82,7 +81,6 @@ class AngleInterpolationAgent(PIDAgent):
 
                     elif times[name_index][len(times[name_index]) - 1] < current_time:
                         target_joints[joint_name] = keys[name_index][len(times[name_index]) - 1][0]
-
         return target_joints
 
     def cubic_bezier(self, p0, p1, p2, p3, i):

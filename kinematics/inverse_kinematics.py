@@ -11,10 +11,10 @@
 
 
 from forward_kinematics import ForwardKinematicsAgent
-from numpy.matlib import identity, zeros, matrix
-from math import cos, sin, pi, atan2, sqrt
-from numpy.linalg import norm, inv
-from numpy import dot, arccos
+from autograd.numpy.linalg import grad_norm
+from autograd.numpy import dot, identity, matrix, sqrt, arctan2, arcsin
+import autograd.numpy as np
+from autograd import grad
 
 
 
@@ -26,51 +26,69 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         :param transform: 4x4 transform matrix
         :return: list of joint angles
         '''
-        joint_angles = []
-        # YOUR CODE HERE
-        if effector_name=="Lleg":
-            hipyawpitch="LHipYawPitch"
-        else:
-            hipyawpitch="RHipYawPitch"
 
-        knee_pitch_length = abs(self.distances["LKneePitch"][2])
-        ankle_pitch_length = abs(self.distances["LAnklePitch"][2])
+        target = self.from_transform(transform)
+        print("Target:" + str(target))
+        thetas = []
+        for i, joint in enumerate(self.chains[effector_name]):
+            thetas.append(self.perception.joint[joint])
 
-        # correct simple distances
-        T = zeros((4, 4))
-        for i in range(3):
-            T[i, 3] = self.distances[hipyawpitch][i]
-        hip_to_endeffector_transform = transform + T
+        print(thetas)
 
-        hip_to_endeffector_vector = hip_to_endeffector_transform[0:3, 3]
-        hip_to_ankle_length = norm(hip_to_endeffector_vector)
+        while True:
+            error = self.error_func(effector_name, thetas, target)
 
-        Rx_pi4 = [[1, 0, 0], [0, cos(pi/4), -sin(pi/4)], [0, sin(pi/4), cos(pi/4)]]
-        hip_to_endeffector_rotated_vector = dot(Rx_pi4, hip_to_endeffector_vector)
+            print(str(error) + "\t" + str(thetas))
 
-        # compute theta 4, 5 and 6 with these values
-        theta6 = atan2(hip_to_endeffector_rotated_vector[1], hip_to_endeffector_rotated_vector[2])
-        theta5 = arccos((norm(hip_to_endeffector_vector)**2 + ankle_pitch_length**2 - knee_pitch_length**2) / (2*ankle_pitch_length*norm(hip_to_endeffector_vector))) \
-            + atan2(hip_to_endeffector_rotated_vector[0], norm(hip_to_endeffector_vector))
-        theta4 = pi - arccos((ankle_pitch_length**2 + knee_pitch_length**2 - norm(hip_to_endeffector_vector)**2)/(2 * ankle_pitch_length * knee_pitch_length))
+            if error < 1e-2:
+                break
+            changed_list = []
+            changed_list.extend(thetas)
+            for i, joint in enumerate(self.chains[effector_name]):
+                func = lambda t: self.error_func_one_theta(effector_name, thetas, target, i, t)
+                func_grad = grad(func)
 
-        # build transform for these (left and right are the same for those)
-        theta4_to_6_transform = self.local_trans("LKneePitch", theta4).dot(self.local_trans("LAnklePitch", theta5)).dot(self.local_trans("LAnkleRoll", theta6)).dot(inv(hip_to_endeffector_transform))
+                d = func_grad(thetas[i]) * 1e-5 * 0.5
+                changed_list[i] -= d
 
-        theta1 = atan2(sqrt(2)*theta4_to_6_transform[1,0], theta4_to_6_transform[1,2])
+            thetas = changed_list
 
-        normal_value_for_2 = sqrt(0.5)
-        ux, uy, uz = 0, normal_value_for_2, normal_value_for_2
-        c = cos(theta1)
-        s = sin(theta1)
-        rotation_matrix = matrix([[c + ux ** 2 * (1 - c), ux * uy * (1 - c) - uz * s, ux * uz * (1 - c) + uy * s],
-                                  [uy * ux * (1 - c) + uz * s, c + uy ** 2 * (1 - c), uy * uz * (1 - c) - ux * s],
-                                  [uz * ux * (1 - c) - uy * s, uz * uy * (1 - c) + ux * s, c + uz ** 2 * (1 - c)]])
+        print("Done: " + str(thetas))
 
-        theta2 = atan2( - rotation_matrix[1, 2], rotation_matrix[1, 1])
-        theta3 = atan2( - rotation_matrix[2, 0], - pi + rotation_matrix[0, 0])
-        joint_angles = [theta1, theta2, theta3, theta4, theta5, theta6]
-        return joint_angles
+        result = self.forward_kinematics_2(effector_name, thetas)
+
+        print(result)
+
+        return thetas
+
+    def forward_kinematics_2(self, effector_name, thetas):
+        T = identity(4)
+        for i, joint in enumerate(self.chains[effector_name]):
+            angle = thetas[i]
+            Tl = self.local_trans(joint, angle)
+            T = dot(T, Tl)
+        return T
+
+    def error_func_one_theta(self, effector_name, thetas, target, theta_index, value):
+        theta_new = []
+        theta_new.extend(thetas)
+        theta_new[theta_index] = value
+        return self.error_func(effector_name, theta_new, target)
+
+    def error_func(self, effector_name, thetas, target):
+        Ts = self.forward_kinematics_2(effector_name, thetas)
+        Te = self.from_transform(Ts)
+        e = target - Te
+        return np.sum(e * e)
+
+    def from_transform(self, transform):
+        # euler angles
+        # xangle = arctan2(transform[2, 1], transform[2, 2])
+        # yangle = - arcsin(transform[2, 0])
+        # zangle = arctan2(transform[1, 0], transform[0, 0])
+        xangle, yangle, zangle = 0, 0, 0
+        return np.array([transform[0, 3], transform[1, 3], transform[2, 3], xangle, yangle, zangle])
+
 
     def set_transforms(self, effector_name, transform):
         '''solve the inverse kinematics and control joints use the results
@@ -79,30 +97,38 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         self.keyframes = ([], [], [])  # the result joint angles have to fill in
 
         angles = self.inverse_kinematics(effector_name, transform)
-        name = list()
+
+        names = list()
         times = list()
         keys = list()
-
-        for chain in self.chains:
-            if chain == 'LLeg':
-                for i, joint in enumerate(self.chains[chain]):
-                    name.append(joint)
-                    keys.append([[angles[i], [0., 0., 0.], [0., 0., 0.]]])
-                    times.append([10.0])
+        for chain_name in self.chains.keys():
+            if (chain_name == effector_name):
+                i = 0
+                for joint_name in self.chains[effector_name]:
+                    print(joint_name)
+                    names.append(joint_name)
+                    times.append([1.0, 2.0])
+                    keys.append([[angles[i], [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]], [angles[i], [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]]])
+                    i = i + 1
             else:
-                for joint in self.chains[chain]:
-                    name.append(joint)
-                    keys.append([[0, [0., 0., 0.], [0., 0., 0.]]])
-                    times.append([1.0])
+                for joint_name in self.chains[chain_name]:
+                    names.append(joint_name)
+                    times.append([1.0, 2.0])
+                    keys.append([[0, [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]], [0, [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]]])
 
-        self.keyframes = (name, times, keys)  # the result joint angles have to fill in
+        self.keyframes = (names, times, keys)
+        print(self.keyframes)
+
 
 
 if __name__ == '__main__':
     agent = InverseKinematicsAgent()
     # test inverse kinematics
     T = identity(4)
-    T[-1, 1] = 0.05
-    T[-1, 2] = 0.26
+    T[0, -1] = 20
+    T[1, -1] = -50
+    T[2, -1] = -200
+    print(T)
+    print(agent.perception.joint)
     agent.set_transforms('LLeg', T)
     agent.run()
