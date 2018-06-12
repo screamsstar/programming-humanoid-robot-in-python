@@ -15,6 +15,7 @@ from autograd.numpy.linalg import grad_norm
 from autograd.numpy import dot, identity, matrix, sqrt, arctan2, arcsin
 import autograd.numpy as np
 from autograd import grad
+from collections import deque
 
 
 
@@ -28,35 +29,50 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         '''
 
         target = self.from_transform(transform)
-        print("Target:" + str(target))
+        print("Target Vector:" + str(target) + "\n")
         thetas = []
         for i, joint in enumerate(self.chains[effector_name]):
             thetas.append(self.perception.joint[joint])
 
-        print(thetas)
+        print("Start angles:" + str(thetas) + "\n")
+
+        last_error = deque(np.zeros(10), maxlen=10)
+
+        print("Error\t|\tAngles\n--------------------------------------")
 
         while True:
             error = self.error_func(effector_name, thetas, target)
 
             print(str(error) + "\t" + str(thetas))
 
-            if error < 1e-2:
+            if error+0.1 > last_error[0] > error-0.1 and error < 50:
+                print("best possible solution with error: " + str(error))
                 break
-            changed_list = []
-            changed_list.extend(thetas)
+
+            changes_list = []
+            changes_list.extend(thetas)
             for i, joint in enumerate(self.chains[effector_name]):
                 func = lambda t: self.error_func_one_theta(effector_name, thetas, target, i, t)
                 func_grad = grad(func)
 
-                d = func_grad(thetas[i]) * 1e-5 * 0.5
-                changed_list[i] -= d
+                d = func_grad(thetas[i])
+                changes_list[i] = d
 
-            thetas = changed_list
+            summed_d = 0
+            for i in changes_list:
+                summed_d += abs(i)
 
-        print("Done: " + str(thetas))
+            for i, joint in enumerate(self.chains[effector_name]):
+                thetas[i] -= (changes_list[i] / summed_d) * 1e-2
+
+            last_error.append(error)
+
+
+        print("Done! Thetas:" + str(thetas))
 
         result = self.forward_kinematics_2(effector_name, thetas)
 
+        print("Resulting transform:")
         print(result)
 
         return thetas
@@ -86,49 +102,50 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         # xangle = arctan2(transform[2, 1], transform[2, 2])
         # yangle = - arcsin(transform[2, 0])
         # zangle = arctan2(transform[1, 0], transform[0, 0])
-        xangle, yangle, zangle = 0, 0, 0
+        # arctan or arcsin or arccos seem to not work with autograd
+
+        # this is a simplified substitute for the angles
+        # --> distance between the corresponding vector and the standard axis-vector and that squared
+        #  (easier but not as good--> orientation is only kinda working)
+        xangle = (transform[0, 0]-1)**2 + transform[0, 1]**2 + transform[0, 2]**2
+        yangle = transform[1, 0]**2 + (transform[1, 1]-1)**2 + transform[1, 2]**2
+        zangle = transform[2, 0]**2 + transform[2, 1]**2 + (transform[2, 2]-1)**2
+        # xangle, yangle, zangle = 0, 0, 0
         return np.array([transform[0, 3], transform[1, 3], transform[2, 3], xangle, yangle, zangle])
 
 
     def set_transforms(self, effector_name, transform):
-        '''solve the inverse kinematics and control joints use the results
         '''
-        # YOUR CODE HERE
-        self.keyframes = ([], [], [])  # the result joint angles have to fill in
+        solve the inverse kinematics and control joints use the results
+        '''
 
         angles = self.inverse_kinematics(effector_name, transform)
 
-        names = list()
-        times = list()
-        keys = list()
+        names = []
+        times = []
+        keys = []
         for chain_name in self.chains.keys():
-            if (chain_name == effector_name):
-                i = 0
-                for joint_name in self.chains[effector_name]:
-                    print(joint_name)
-                    names.append(joint_name)
-                    times.append([1.0, 2.0])
-                    keys.append([[angles[i], [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]], [angles[i], [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]]])
-                    i = i + 1
-            else:
+            if chain_name != effector_name:
                 for joint_name in self.chains[chain_name]:
                     names.append(joint_name)
-                    times.append([1.0, 2.0])
-                    keys.append([[0, [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]], [0, [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]]])
+                    times.append([5.0, 8.0])
+                    keys.append([[0, [1, 1.00000, 0.00000], [1, -1.00000, 0.00000]], [0, [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]]])
+
+        for i, joint_name in enumerate(self.chains[effector_name]):
+            names.append(joint_name)
+            times.append([5.0, 8.0])
+            keys.append([[angles[i], [1, -1.00000, 0.00000], [1, -1.00000, 0.00000]], [angles[i], [3, 0.00000, 0.00000], [3, 0.00000, 0.00000]]])
 
         self.keyframes = (names, times, keys)
-        print(self.keyframes)
-
 
 
 if __name__ == '__main__':
     agent = InverseKinematicsAgent()
     # test inverse kinematics
     T = identity(4)
-    T[0, -1] = 20
-    T[1, -1] = -50
-    T[2, -1] = -200
-    print(T)
-    print(agent.perception.joint)
+    T[0, -1] = -10
+    T[1, -1] = 60
+    T[2, -1] = -260
+    print("Target transform:" + str(T) + "\n")
     agent.set_transforms('LLeg', T)
     agent.run()
