@@ -11,7 +11,7 @@
 
 
 from forward_kinematics import ForwardKinematicsAgent
-from autograd.numpy.linalg import grad_norm
+from numpy import round
 from autograd.numpy import dot, identity, matrix, sqrt, arctan2, arcsin
 import autograd.numpy as np
 from autograd import grad
@@ -38,8 +38,8 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         print("Starting numerical calculation (takes some time...)")
 
         if self.inverse_debug:
-            print("Target Vector:" + str(target) + "\n")
-            print("Start angles:" + str(thetas) + "\n")
+            print("Target Vector:" + str(round(target, 2)) + "\n")
+            print("Start angles:" + str(round(thetas, 2)) + "\n")
             print("Error\t\t\t|\t\tAngles")
             print("------------------------------------------------------------")
 
@@ -76,7 +76,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         if self.inverse_debug:
             print("Done! Thetas:" + str(thetas))
             print("Resulting transform (theoretical):")
-            print(result)
+            print(round(result, 2))
 
         return thetas
 
@@ -144,6 +144,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
 
 if __name__ == '__main__':
     agent = InverseKinematicsAgent()
+    print("Ausgaben von forward/inverse kinematics ueber flags aktivieren/deaktivieren!")
     # test inverse kinematics
     T = identity(4)
     T[0, 0] = 0

@@ -21,7 +21,7 @@ import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 
 from autograd.numpy import cos, sin, matrix, identity, dot, sqrt
-
+from numpy import round
 from angle_interpolation import AngleInterpolationAgent
 
 
@@ -78,7 +78,7 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                         'RAnklePitch': [0, 0, -102.9],
                         'RAnkleRoll': [0, 0, 0],
                         }
-        self.forward_kinematics_debug = True
+        self.forward_kinematics_debug = False
         self.forward_kinematics_debug_single_transforms = False
         self.inverse_debug = True
 
@@ -134,25 +134,15 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                 Tl = self.local_trans(joint, angle)
                 if self.forward_kinematics_debug_single_transforms:
                     print(joint)
-                    print(Tl)
+                    print(round(Tl, 2))
                 T = dot(T, Tl)
                 self.transforms[joint] = T
             if self.forward_kinematics_debug:
                 print(chain_name)
-                print(T)
-
-
-
-    def forward_kinematics_for_one_chain(self, chain_name, angles):
-        chain = self.chains[chain_name]
-        T = identity(4)
-        for joint in chain:
-            angle = angles[joint]
-            Tl = self.local_trans(joint, angle)
-            T = dot(T, Tl)
-            self.transforms[joint] = T
+                print(round(T, 2))
 
 
 if __name__ == '__main__':
+    print("Ausgaben von forward/inverse kinematics ueber flags aktivieren/deaktivieren!")
     agent = ForwardKinematicsAgent()
     agent.run()
