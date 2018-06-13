@@ -136,7 +136,7 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
                     print(joint)
                     print(round(Tl, 2))
                 T = dot(T, Tl)
-                self.transforms[joint] = T
+                self.transforms[joint] = T.copy()
             if self.forward_kinematics_debug:
                 print(chain_name)
                 print(round(T, 2))
