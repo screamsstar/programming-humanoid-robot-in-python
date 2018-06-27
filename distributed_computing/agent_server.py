@@ -16,6 +16,7 @@ import os
 import sys
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from threading import Thread
+from agent_client import NumpyMarshall
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'kinematics'))
 
 from inverse_kinematics import InverseKinematicsAgent
@@ -28,6 +29,7 @@ class ServerAgent(InverseKinematicsAgent):
 
     def __init__(self):
         super(ServerAgent, self).__init__()
+        self.np_marshall = NumpyMarshall()
         self.rpc_server = SimpleXMLRPCServer(("localhost", 8000))
         self.rpc_server.register_function(self.get_angle)
         self.rpc_server.register_function(self.set_angle)
@@ -78,13 +80,14 @@ class ServerAgent(InverseKinematicsAgent):
         '''get transform with given name
         '''
         # YOUR CODE HERE
-        return self.transforms[name]
+        return self.np_marshall.marshall(self.transforms[name])
 
     def set_transform(self, effector_name, transform):
         '''solve the inverse kinematics and control joints use the results
         '''
         # YOUR CODE HERE
-        self.set_transforms(effector_name, transform)
+        self.set_transforms(effector_name, self.np_marshall.unmarshall(transform))
+        self.execute_keyframes(keyframes=self.keyframes)
         return True
 
 

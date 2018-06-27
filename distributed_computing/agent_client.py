@@ -9,7 +9,9 @@
 import weakref
 from xmlrpc.client import ServerProxy
 from threading import Thread
+from numpy import zeros
 # Testing
+from numpy import identity
 import os
 import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
@@ -41,6 +43,7 @@ class ClientAgent(object):
     # YOUR CODE HERE
     def __init__(self):
         self.post = PostHandler(self)
+        self.np_marshall = NumpyMarshall()
         self.rpc_proxy = ServerProxy("http://localhost:8000/")
     
     def get_angle(self, joint_name):
@@ -72,21 +75,50 @@ class ClientAgent(object):
         '''get transform with given name
         '''
         # YOUR CODE HERE
-        return self.rpc_proxy.get_transform(name)
+        return self.np_marshall.unmarshall(self.rpc_proxy.get_transform(name))
 
     def set_transform(self, effector_name, transform):
         '''solve the inverse kinematics and control joints use the results
         '''
         # YOUR CODE HERE
-        self.rpc_proxy.set_transform(effector_name, transform)
+        self.rpc_proxy.set_transform(effector_name, self.np_marshall.marshall(transform))
         return
+
+
+class NumpyMarshall(object):
+
+    def marshall(self, transform):
+        value_list = []
+        for i in range(4):
+            for j in range(4):
+                value_list.append(transform[i, j].item())
+
+        return value_list
+
+    def unmarshall(self, value_list):
+        transform = zeros([4, 4])
+        index = 0
+        for i in range(4):
+            for j in range(4):
+                transform[i, j] = value_list[index]
+                index += 1
+
+        return transform
+
 
 if __name__ == '__main__':
     agent = ClientAgent()
     # TEST CODE HERE
-    agent.post.execute_keyframes(keyframes=hello())
-    print agent.get_posture()
-    print(agent.get_posture())
-
-
+    # agent.execute_keyframes(keyframes=hello())
+    print(agent.get_transform("HeadYaw"))
+    T = identity(4)
+    T[0, 0] = 0
+    T[0, 2] = 1
+    T[2, 0] = 0
+    T[0, 2] = 1
+    T[0, -1] = 200
+    T[1, -1] = -60
+    T[2, -1] = -20
+    agent.set_transform("RLeg", T)
+    print("Done")
 
