@@ -32,6 +32,7 @@ class AngleInterpolationAgent(PIDAgent):
                  sync_mode=True):
         super(AngleInterpolationAgent, self).__init__(simspark_ip, simspark_port, teamname, player_id, sync_mode)
         self.keyframes = ([], [], [])
+        self.keyframe_running = False
         self.__start_time = -1
         self.__start_joints = -1
 
@@ -45,6 +46,7 @@ class AngleInterpolationAgent(PIDAgent):
         # YOUR CODE HERE
 
         if self.__start_time < 0:
+            self.keyframe_running = True
             self.__start_time = perception.time
             self.__start_joints = perception.joint
 
@@ -81,6 +83,7 @@ class AngleInterpolationAgent(PIDAgent):
 
                     elif times[name_index][len(times[name_index]) - 1] < current_time:
                         target_joints[joint_name] = keys[name_index][len(times[name_index]) - 1][0]
+                        self.keyframe_running = False
         return target_joints
 
     def cubic_bezier(self, p0, p1, p2, p3, i):

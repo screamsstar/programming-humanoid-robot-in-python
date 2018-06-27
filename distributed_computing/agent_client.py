@@ -7,6 +7,14 @@
 '''
 
 import weakref
+from xmlrpc.client import ServerProxy
+from threading import Thread
+# Testing
+import os
+import sys
+sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
+from keyframes import hello
+
 
 class PostHandler(object):
     '''the post hander wraps function to be excuted in paralle
@@ -17,10 +25,14 @@ class PostHandler(object):
     def execute_keyframes(self, keyframes):
         '''non-blocking call of ClientAgent.execute_keyframes'''
         # YOUR CODE HERE
+        t = Thread(target=self.proxy.execute_keyframes, args=[keyframes])
+        t.start()
 
     def set_transform(self, effector_name, transform):
         '''non-blocking call of ClientAgent.set_transform'''
         # YOUR CODE HERE
+        t = Thread(target=self.proxy.set_transform, args=[effector_name, transform])
+        t.start()
 
 
 class ClientAgent(object):
@@ -29,38 +41,52 @@ class ClientAgent(object):
     # YOUR CODE HERE
     def __init__(self):
         self.post = PostHandler(self)
+        self.rpc_proxy = ServerProxy("http://localhost:8000/")
     
     def get_angle(self, joint_name):
         '''get sensor value of given joint'''
         # YOUR CODE HERE
+        return self.rpc_proxy.get_angle(joint_name)
     
     def set_angle(self, joint_name, angle):
         '''set target angle of joint for PID controller
         '''
         # YOUR CODE HERE
+        self.rpc_proxy.set_angle(joint_name, angle)
+        return
 
     def get_posture(self):
         '''return current posture of robot'''
         # YOUR CODE HERE
+        return self.rpc_proxy.get_posture()
 
     def execute_keyframes(self, keyframes):
         '''excute keyframes, note this function is blocking call,
         e.g. return until keyframes are executed
         '''
         # YOUR CODE HERE
+        self.rpc_proxy.execute_keyframes(keyframes)
+        return
 
     def get_transform(self, name):
         '''get transform with given name
         '''
         # YOUR CODE HERE
+        return self.rpc_proxy.get_transform(name)
 
     def set_transform(self, effector_name, transform):
         '''solve the inverse kinematics and control joints use the results
         '''
         # YOUR CODE HERE
+        self.rpc_proxy.set_transform(effector_name, transform)
+        return
 
 if __name__ == '__main__':
     agent = ClientAgent()
     # TEST CODE HERE
+    agent.post.execute_keyframes(keyframes=hello())
+    print agent.get_posture()
+    print(agent.get_posture())
+
 
 
