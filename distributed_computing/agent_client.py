@@ -109,17 +109,7 @@ class NumpyMarshall(object):
 if __name__ == '__main__':
     agent = ClientAgent()
     # TEST CODE HERE
-    # agent.execute_keyframes(keyframes=hello())
     print(agent.get_transform("RAnkleRoll"))
-    T = identity(4)
-    T[0, 0] = 0
-    T[0, 2] = 1
-    T[2, 0] = 0
-    T[0, 2] = 1
-    T[0, -1] = 200
-    T[1, -1] = -60
-    T[2, -1] = -20
-    agent.set_transform("RLeg", T)
-    print(agent.get_transform("RAnkleRoll"))
+    agent.execute_keyframes(keyframes=hello())
     print("Done")
 
